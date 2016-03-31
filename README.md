@@ -1,4 +1,7 @@
-## Example
+## Transition-based NER system.
+
+This system is part of the paper accepted at NAACL-HLT 2016 Conference.
+See the paper here: http://arxiv.org/pdf/1603.01360v1.pdf
 
 #### Desired labeling
 

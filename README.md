@@ -42,6 +42,9 @@ Convert conll format to ner action (convert-conll2trans.pl) and convert it to pa
    python conll2parser.py -f conll2003/train.trans > conll2003/train.parser 
 ```
 
+ Link to the word vectors that we used in the NAACL 2016 paper for English:  [sskip.100.vectors](https://drive.google.com/file/d/0B8nESzOdPhLsdWF2S1Ayb1RkTXc/view?usp=sharing).
+
+
 #### Build the system
 
 The first time you clone the repository, you need to sync the cnn/ submodule.
@@ -57,14 +60,14 @@ make -j2
 
 #### Training
 
-    ./lstm-parse -T /usr0/home/kkawakam/conll2003/train.parser -d /usr0/home/kkawakam/conll2003/dev.parser --hidden_dim 100 --lstm_input_dim 100 -w /usr3/home/lingwang/chris/sskip.100.vectors --pretrained_dim 100 --rel_dim 20 --action_dim 20 --input_dim 100 -t -S -D 0.3 > logNERYesCharNoPosYesEmbeddingsD0.3.txt &
+    ./lstm-parse -T conll2003/train.parser -d conll2003/dev.parser --hidden_dim 100 --lstm_input_dim 100 -w sskip.100.vectors --pretrained_dim 100 --rel_dim 20 --action_dim 20 --input_dim 100 -t -S -D 0.3 > logNERYesCharNoPosYesEmbeddingsD0.3.txt &
 
 
 ### Decoding 
 
 
-    ./lstm-parse -T /usr0/home/kkawakam/conll2003/train.parser -d /usr0/home/kkawakam/conll2003/test.parser --hidden_dim 100 --lstm_input_dim 100 -w /usr3/home/lingwang/chris/sskip.100.vectors --pretrained_dim 100 --rel_dim 20 --action_dim 20 --input_dim 100 -m latest_model -S > output.txt
-    python attach_prediction.py -p output.txt -t /usr0/home/kkawakam/conll2003/test -o evaloutput.txt
+    ./lstm-parse -T conll2003/train.parser -d conll2003/test.parser --hidden_dim 100 --lstm_input_dim 100 -w sskip.100.vectors --pretrained_dim 100 --rel_dim 20 --action_dim 20 --input_dim 100 -m latest_model -S > output.txt
+    python attach_prediction.py -p output.txt -t conll2003/test -o evaloutput.txt
 
 
 #### Evaluation

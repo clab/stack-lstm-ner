@@ -78,3 +78,13 @@ Attach your prediction to test file
   python attach_prediction.py -p (prediction) -t /path/to/conll2003/test -o (output file)
   ./conlleval < (output file)
 ```
+
+
+#### License
+
+This software is released under the terms of the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0).
+
+#### Contact
+
+For questions and usage issues, please contact miguel.ballesteros@upf.edu
+

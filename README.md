@@ -84,7 +84,7 @@ If you make use of this software, please cite the following:
 
     @inproceedings{2016naacl,
       author={Guillaume Lample and Miguel Ballesteros and Kazuya Kawakami and Sandeep Subramanian and Chris Dyer},
-      title={Neural Architectures for Named Entity Recognition}
+      title={Neural Architectures for Named Entity Recognition},
       booktitle={Proc. NAACL-HLT},
       year=2016,
     }

@@ -78,6 +78,16 @@ Attach your prediction to test file
   python attach_prediction.py -p (prediction) -t /path/to/conll2003/test -o (output file)
   ./conlleval < (output file)
 ```
+#### Citation
+
+If you make use of this software, please cite the following:
+
+    @inproceedings{2015naacl,
+      author={Guillaume Lample and Miguel Ballesteros and Kazuya Kawakami and Sandeep Subramanian and Chris Dyer},
+      title={Neural Architectures for Named Entity Recognition}
+      booktitle={Proc. NAACL-HLT},
+      year=2016,
+    }
 
 
 #### License

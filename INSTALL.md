@@ -3,7 +3,7 @@ Minimum Requirements
 1. Boost 1.58.0
 2. Cmake 2.8.7
 3. [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page)
-4. pycnn (don't have to install separately; will be installed below)
+4. `cnn` (now known as `dynet`. Don't have to install this separately; will be installed below)
 
 Installation Steps
 ======================
@@ -94,7 +94,7 @@ If `make install` throws an error like:
   make: *** [install] Error 1
   ```
 Then, in `install` target in `makefile`, add ` --prefix=` (_yes_, it is blank) at the end of the line `${PYTHON} setup.py install --user`. Now, run `make install`
-8. To verify the installation, run the command below in `$PATH_TO_CNN/build`
+8. To verify `cnn` installation, run the command below in `$PATH_TO_CNN/build`
 
   ```bash
   ./examples/xor

@@ -42,9 +42,9 @@ Convert conll format to ner action (convert-conll2trans.pl) and convert it to pa
    python conll2parser.py -f conll2003/train.trans > conll2003/train.parser 
 ```
 
-If you see that the oracle file looks like this, do the following: 
+If you see that the words have ' symbol , do the following: 
 ```
-    []['Peter-NNP', 'Blackburn-NNP'] please change it to [][Peter-NNP, Blackburn-NNP]
+    []['Peter-NNP', 'Blackburn-NNP'] CHANGE TO in the entire follow-->  [][Peter-NNP, Blackburn-NNP]
 ```
 
  Link to the word vectors that we used in the NAACL 2016 paper for English:  [sskip.100.vectors](https://drive.google.com/file/d/0B8nESzOdPhLsdWF2S1Ayb1RkTXc/view?usp=sharing).

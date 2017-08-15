@@ -3,24 +3,24 @@ Minimum Requirements
 1. Boost 1.58.0
 2. Cmake 2.8.7
 3. [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page)
-4. `cnn` (now known as `dynet`. Don't have to install this separately; will be installed below)
+4. `dynet` (now known as `dynet`. Don't have to install this separately; will be installed below)
 
 Installation Steps
 ======================
 These steps have been tested on Ubuntu 16.04 and macOS Sierra.
 
-1. Once this repository has been cloned, the `cnn/` submodule needs to be synced
+1. Once this repository has been cloned, the `dynet/` submodule needs to be synced
 
   ```bash
   git submodule init
   git submodule update
   ```
-2. This will download the required files to cnn directory. Let this directory be `PATH_TO_CNN`.
+2. This will download the required files to dynet directory. Let this directory be `PATH_TO_DYNET`.
   
   ```bash
-  PATH_TO_CNN=<your_stack_lstm_dir>/cnn/
+  PATH_TO_DYNET=<your_stack_lstm_dir>/dynet/
   ```
-3. Download the C++ library `eigen` which is used by cnn:
+3. Download the C++ library `eigen` which is used by dynet:
   
   ```bash
   cd $HOME
@@ -36,31 +36,31 @@ These steps have been tested on Ubuntu 16.04 and macOS Sierra.
   cmake ..
   ```
 5. Run `sudo make install`. This will push the library files to the local `include` directory. On Ubuntu 16.04 and macOS Sierra, they are copied to `/usr/local/include/eigen3`. 
-6. Go back to `cnn` directory in `stack-lstm-ner` and build `cnn`. Modify the code below with your `eigen3` `include` location and boost location. 
+6. Go back to `dynet` directory in `stack-lstm-ner` and build `dynet`. Modify the code below with your `eigen3` `include` location and boost location. 
 
   ```bash
-  cd $PATH_TO_CNN
+  cd $PATH_TO_DYNET
   mkdir build
   cd build
   cmake .. -DEIGEN3_INCLUDE_DIR=/usr/local/include/eigen3 -DBOOST_ROOT=$HOME/.local/boost_1_58_0 -DBoost_NO_BOOST_CMAKE=ON
   make -j 2
   ```
-Your program might work without providing the boost location as a command line argument. **Note:** If CNN fails to compile and throws an error like this:
+Your program might work without providing the boost location as a command line argument. **Note:** If DYNET fails to compile and throws an error like this:
   ```bash
   $ make -j 2
-  Scanning dependencies of target cnn
-  Scanning dependencies of target cnn_shared
-  [  1%] [  2%] Building CXX object cnn/CMakeFiles/cnn.dir/cfsm-builder.cc.o
-  Building CXX object cnn/CMakeFiles/cnn_shared.dir/cfsm-builder.cc.o
-  In file included from /home/user/cnn/cnn/cnn.h:13:0,
-                   from /home/user/cnn/cnn/cfsm-builder.h:6,
-                   from /home/user/cnn/cnn/cfsm-builder.cc:1:
-  /home/user/cnn/cnn/tensor.h:22:42: fatal error: unsupported/Eigen/CXX11/Tensor: No such file or directory
+  Scanning dependencies of target dynet
+  Scanning dependencies of target dynet_shared
+  [  1%] [  2%] Building CXX object dynet/CMakeFiles/dynet.dir/cfsm-builder.cc.o
+  Building CXX object dynet/CMakeFiles/dynet_shared.dir/cfsm-builder.cc.o
+  In file included from /home/user/dynet/dynet/dynet.h:13:0,
+                   from /home/user/dynet/dynet/cfsm-builder.h:6,
+                   from /home/user/dynet/dynet/cfsm-builder.cc:1:
+  /home/user/dynet/dynet/tensor.h:22:42: fatal error: unsupported/Eigen/CXX11/Tensor: No such file or directory
   #include <unsupported/Eigen/CXX11/Tensor>
                                             ^
   compilation terminated.
   ```
-Then, download and install a stable version of Eigen and rebuild CNN:
+Then, download and install a stable version of Eigen and rebuild DYNET:
 
   ```bash
   cd $HOME
@@ -71,12 +71,12 @@ Then, download and install a stable version of Eigen and rebuild CNN:
 Repeat step 4 and run:
 
   ```bash
-  cd $PATH_TO_CNN/build
+  cd $PATH_TO_DYNET/build
   rm -rf *
   ```
-Now, rebuild CNN again.
-7. Install `cython` using `pip install cython` as this is required for compiling `pycnn`.
-8. Go to `pycnn` in `cnn` directory and customize `setup.py` to include (i) parent directory where main `cnn` directory is saved and (ii) the path of your local `include` `eigen3`. Then run:
+Now, rebuild DYNET again.
+7. Install `cython` using `pip install cython` as this is required for compiling `pydynet`.
+8. Go to `pydynet` in `dynet` directory and customize `setup.py` to include (i) parent directory where main `dynet` directory is saved and (ii) the path of your local `include` `eigen3`. Then run:
 
   ```bash
   make
@@ -84,17 +84,17 @@ Now, rebuild CNN again.
   ```
 If `make install` throws an error like:
   ```bash
-  cp ../build/cnn/libcnn_shared.dylib .
+  cp ../build/dynet/libdynet_shared.dylib .
   python setup.py build_ext --inplace
   running build_ext
-  skipping 'pycnn.cpp' Cython extension (up-to-date)
+  skipping 'pydynet.cpp' Cython extension (up-to-date)
   python setup.py install --user
   running install
   error: can't combine user with prefix, exec_prefix/home, or install_(plat)base
   make: *** [install] Error 1
   ```
 Then, in `install` target in `makefile`, add ` --prefix=` (_yes_, it is blank) at the end of the line `${PYTHON} setup.py install --user`. Now, run `make install`
-8. To verify `cnn` installation, run the command below in `$PATH_TO_CNN/build`
+8. To verify `dynet` installation, run the command below in `$PATH_TO_DYNET/build`
 
   ```bash
   ./examples/xor

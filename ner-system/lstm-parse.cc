@@ -19,12 +19,12 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/program_options.hpp>
 
-#include "cnn/training.h"
-#include "cnn/cnn.h"
-#include "cnn/expr.h"
-#include "cnn/nodes.h"
-#include "cnn/lstm.h"
-#include "cnn/rnn.h"
+#include "dynet/training.h"
+#include "dynet/dynet.h"
+#include "dynet/expr.h"
+#include "dynet/nodes.h"
+#include "dynet/lstm.h"
+#include "dynet/rnn.h"
 #include "c2.h"
 
 cpyp::Corpus corpus;
@@ -54,8 +54,8 @@ unsigned POS_SIZE = 0;
 
 unsigned CHAR_SIZE = 255; //size of ascii chars... Miguel
 
-using namespace cnn::expr;
-using namespace cnn;
+using namespace dynet::expr;
+using namespace dynet;
 using namespace std;
 namespace po = boost::program_options;
 
@@ -722,7 +722,7 @@ void output_conll(const vector<unsigned>& sentence, const vector<unsigned>& pos,
 }
 
 int main(int argc, char** argv) {
-  cnn::Initialize(argc, argv);
+  dynet::Initialize(argc, argv);
 
   cerr << "COMMAND:"; 
   for (unsigned i = 0; i < static_cast<unsigned>(argc); ++i) cerr << ' ' << argv[i];
@@ -873,7 +873,7 @@ int main(int argc, char** argv) {
            vector<unsigned> tsentence=sentence;
            if (unk_strategy == 1) {
              for (auto& w : tsentence)
-               if (singletons.count(w) && cnn::rand01() < unk_prob) w = kUNK;
+               if (singletons.count(w) && dynet::rand01() < unk_prob) w = kUNK;
            }
 	   const vector<unsigned>& sentencePos=corpus.sentencesPos[order[si]]; 
 	   const vector<unsigned>& actions=corpus.correct_act_sent[order[si]];

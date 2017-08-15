@@ -1,9 +1,8 @@
 Minimum Requirements
 ======================
-1. Boost 1.58.0
-2. Cmake 2.8.7
-3. [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page)
-4. `dynet` (now known as `dynet`. Don't have to install this separately; will be installed below)
+1. Cmake 2.8.7
+2. [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page)
+3. `dynet` (Don't have to install this separately; will be installed below)
 
 Installation Steps
 ======================
@@ -42,10 +41,10 @@ These steps have been tested on Ubuntu 16.04 and macOS Sierra.
   cd $PATH_TO_DYNET
   mkdir build
   cd build
-  cmake .. -DEIGEN3_INCLUDE_DIR=/usr/local/include/eigen3 -DBOOST_ROOT=$HOME/.local/boost_1_58_0 -DBoost_NO_BOOST_CMAKE=ON
+  cmake .. -DEIGEN3_INCLUDE_DIR=/usr/local/include/eigen3
   make -j 2
   ```
-Your program might work without providing the boost location as a command line argument. **Note:** If DYNET fails to compile and throws an error like this:
+**Note:** If DYNET fails to compile and throws an error like this:
   ```bash
   $ make -j 2
   Scanning dependencies of target dynet
@@ -60,7 +59,7 @@ Your program might work without providing the boost location as a command line a
                                             ^
   compilation terminated.
   ```
-Then, download and install a stable version of Eigen and rebuild DYNET:
+Then, download and install a stable version of Eigen and rebuild DyNet:
 
   ```bash
   cd $HOME
@@ -74,33 +73,8 @@ Repeat step 4 and run:
   cd $PATH_TO_DYNET/build
   rm -rf *
   ```
-Now, rebuild DYNET again.
-7. Install `cython` using `pip install cython` as this is required for compiling `pydynet`.
-8. Go to `pydynet` in `dynet` directory and customize `setup.py` to include (i) parent directory where main `dynet` directory is saved and (ii) the path of your local `include` `eigen3`. Then run:
-
-  ```bash
-  make
-  make install
-  ```
-If `make install` throws an error like:
-  ```bash
-  cp ../build/dynet/libdynet_shared.dylib .
-  python setup.py build_ext --inplace
-  running build_ext
-  skipping 'pydynet.cpp' Cython extension (up-to-date)
-  python setup.py install --user
-  running install
-  error: can't combine user with prefix, exec_prefix/home, or install_(plat)base
-  make: *** [install] Error 1
-  ```
-Then, in `install` target in `makefile`, add ` --prefix=` (_yes_, it is blank) at the end of the line `${PYTHON} setup.py install --user`. Now, run `make install`
-8. To verify `dynet` installation, run the command below in `$PATH_TO_DYNET/build`
-
-  ```bash
-  ./examples/xor
-  ```
-This will train a multi layer perceptron to predict the xor function.
-9. Create a `build` directory in <stack_lstm_dir> and in the same directory `stack-lstm-ner`, do `cmake .` and then `make`. This will build `lstm-parse` in `ner-system`
+Now, rebuild DyNet again.
+7. Create a `build` directory in <stack_lstm_dir> and in the same directory `stack-lstm-ner`, do `cmake .  -DEIGEN3_INCLUDE_DIR=/usr/local/include/eigen3` and then `make`. This will build `lstm-parse` in `ner-system`
 
 Debugging build errors
 ========================

@@ -1,3 +1,4 @@
 [submodule "dynet"]
 	path = dynet
-	url = https://github.com/clab/dynet
+	url = https://github.com/clab/dynet.git
+	branch = master

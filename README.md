@@ -52,7 +52,7 @@ If you see that the words in the oracle have ' symbol , do the following in the 
 
 #### Build the system
 
-The first time you clone the repository, you need to sync the cnn/ submodule.
+The first time you clone the repository, you need to sync the dynet/ submodule.
 ```
 git submodule init
 git submodule update

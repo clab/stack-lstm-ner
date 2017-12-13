@@ -15,16 +15,17 @@
 #include <unistd.h>
 #include <signal.h>
 
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
+// #include <boost/archive/text_oarchive.hpp>
+// #include <boost/archive/text_iarchive.hpp>
 #include <boost/program_options.hpp>
 
-#include "cnn/training.h"
-#include "cnn/cnn.h"
-#include "cnn/expr.h"
-#include "cnn/nodes.h"
-#include "cnn/lstm.h"
-#include "cnn/rnn.h"
+#include "dynet/training.h"
+#include "dynet/dynet.h"
+#include "dynet/expr.h"
+#include "dynet/nodes.h"
+#include "dynet/lstm.h"
+#include "dynet/rnn.h"
+#include "dynet/io.h"
 #include "c2.h"
 
 cpyp::Corpus corpus;
@@ -54,8 +55,7 @@ unsigned POS_SIZE = 0;
 
 unsigned CHAR_SIZE = 255; //size of ascii chars... Miguel
 
-using namespace cnn::expr;
-using namespace cnn;
+using namespace dynet;
 using namespace std;
 namespace po = boost::program_options;
 
@@ -110,93 +110,92 @@ struct ParserBuilder {
   LSTMBuilder ent_lstm_fwd;
   LSTMBuilder ent_lstm_rev;
 
-  LookupParameters* p_w; // word embeddings
-  LookupParameters* p_t; // pretrained word embeddings (not updated)
-  LookupParameters* p_a; // input action embeddings
-  LookupParameters* p_r; // relation embeddings
-  LookupParameters* p_p; // pos tag embeddings
-  Parameters* p_pbias; // parser state bias
-  Parameters* p_A; // action lstm to parser state
-  Parameters* p_B; // buffer lstm to parser state
-  Parameters* p_O; // output lstm to parser state
+  LookupParameter p_w; // word embeddings
+  LookupParameter p_t; // pretrained word embeddings (not updated)
+  LookupParameter p_a; // input action embeddings
+  LookupParameter p_r; // relation embeddings
+  LookupParameter p_p; // pos tag embeddings
+  Parameter p_pbias; // parser state bias
+  Parameter p_A; // action lstm to parser state
+  Parameter p_B; // buffer lstm to parser state
+  Parameter p_O; // output lstm to parser state
 
-  Parameters* p_S; // stack lstm to parser state
-  Parameters* p_H; // head matrix for composition function
-  Parameters* p_D; // dependency matrix for composition function
-  Parameters* p_R; // relation matrix for composition function
-  Parameters* p_w2l; // word to LSTM input
-  Parameters* p_p2l; // POS to LSTM input
-  Parameters* p_t2l; // pretrained word embeddings to LSTM input
-  Parameters* p_ib; // LSTM input bias
-  Parameters* p_cbias; // composition function bias
-  Parameters* p_p2a;   // parser state to action
-  Parameters* p_action_start;  // action bias
-  Parameters* p_abias;  // action bias
-  Parameters* p_buffer_guard;  // end of buffer
-  Parameters* p_stack_guard;  // end of stack
-  Parameters* p_output_guard;  // end of output buffer
+  Parameter p_S; // stack lstm to parser state
+  Parameter p_H; // head matrix for composition function
+  Parameter p_D; // dependency matrix for composition function
+  Parameter p_R; // relation matrix for composition function
+  Parameter p_w2l; // word to LSTM input
+  Parameter p_p2l; // POS to LSTM input
+  Parameter p_t2l; // pretrained word embeddings to LSTM input
+  Parameter p_ib; // LSTM input bias
+  Parameter p_cbias; // composition function bias
+  Parameter p_p2a;   // parser state to action
+  Parameter p_action_start;  // action bias
+  Parameter p_abias;  // action bias
+  Parameter p_buffer_guard;  // end of buffer
+  Parameter p_stack_guard;  // end of stack
+  Parameter p_output_guard;  // end of output buffer
 
-  Parameters* p_start_of_word;//Miguel -->dummy <s> symbol
-  Parameters* p_end_of_word; //Miguel --> dummy </s> symbol
-  LookupParameters* char_emb; //Miguel-> mapping of characters to vectors 
+  Parameter p_start_of_word;//Miguel -->dummy <s> symbol
+  Parameter p_end_of_word; //Miguel --> dummy </s> symbol
+  LookupParameter char_emb; //Miguel-> mapping of characters to vectors 
 
 
   LSTMBuilder fw_char_lstm; // Miguel
   LSTMBuilder bw_char_lstm; //Miguel
  
-  Parameters* p_cW;
+  Parameter p_cW;
 
 
-  explicit ParserBuilder(Model* model, const unordered_map<unsigned, vector<float>>& pretrained) :
+  explicit ParserBuilder(ParameterCollection & model, const unordered_map<unsigned, vector<float>>& pretrained) :
       stack_lstm(LAYERS, LSTM_INPUT_DIM, HIDDEN_DIM, model),
-      buffer_lstm(LAYERS, LSTM_INPUT_DIM, HIDDEN_DIM, model),
       output_lstm(LAYERS, LSTM_INPUT_DIM, HIDDEN_DIM, model),
+      buffer_lstm(LAYERS, LSTM_INPUT_DIM, HIDDEN_DIM, model),
       action_lstm(LAYERS, ACTION_DIM, HIDDEN_DIM, model),
       ent_lstm_fwd(LAYERS, LSTM_INPUT_DIM, LSTM_INPUT_DIM, model), 
       ent_lstm_rev(LAYERS, LSTM_INPUT_DIM, LSTM_INPUT_DIM, model),
-      p_w(model->add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM})),
-      p_a(model->add_lookup_parameters(ACTION_SIZE, {ACTION_DIM})),
-      p_r(model->add_lookup_parameters(ACTION_SIZE, {REL_DIM})),
-      p_pbias(model->add_parameters({HIDDEN_DIM})),
-      p_A(model->add_parameters({HIDDEN_DIM, HIDDEN_DIM})),
-      p_B(model->add_parameters({HIDDEN_DIM, HIDDEN_DIM})),
-      p_O(model->add_parameters({HIDDEN_DIM, HIDDEN_DIM})),
-      p_S(model->add_parameters({HIDDEN_DIM, HIDDEN_DIM})),
-      p_H(model->add_parameters({LSTM_INPUT_DIM, LSTM_INPUT_DIM})),
-      p_D(model->add_parameters({LSTM_INPUT_DIM, LSTM_INPUT_DIM})),
-      p_R(model->add_parameters({LSTM_INPUT_DIM, REL_DIM})),
-      p_w2l(model->add_parameters({LSTM_INPUT_DIM, INPUT_DIM})),
-      p_ib(model->add_parameters({LSTM_INPUT_DIM})),
-      p_cbias(model->add_parameters({LSTM_INPUT_DIM})),
-      p_p2a(model->add_parameters({ACTION_SIZE, HIDDEN_DIM})),
-      p_action_start(model->add_parameters({ACTION_DIM})),
-      p_abias(model->add_parameters({ACTION_SIZE})),
+      p_w(model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM})),
+      p_a(model.add_lookup_parameters(ACTION_SIZE, {ACTION_DIM})),
+      p_r(model.add_lookup_parameters(ACTION_SIZE, {REL_DIM})),
+      p_pbias(model.add_parameters({HIDDEN_DIM})),
+      p_A(model.add_parameters({HIDDEN_DIM, HIDDEN_DIM})),
+      p_B(model.add_parameters({HIDDEN_DIM, HIDDEN_DIM})),
+      p_O(model.add_parameters({HIDDEN_DIM, HIDDEN_DIM})),
+      p_S(model.add_parameters({HIDDEN_DIM, HIDDEN_DIM})),
+      p_H(model.add_parameters({LSTM_INPUT_DIM, LSTM_INPUT_DIM})),
+      p_D(model.add_parameters({LSTM_INPUT_DIM, LSTM_INPUT_DIM})),
+      p_R(model.add_parameters({LSTM_INPUT_DIM, REL_DIM})),
+      p_w2l(model.add_parameters({LSTM_INPUT_DIM, INPUT_DIM})),
+      p_ib(model.add_parameters({LSTM_INPUT_DIM})),
+      p_cbias(model.add_parameters({LSTM_INPUT_DIM})),
+      p_p2a(model.add_parameters({ACTION_SIZE, HIDDEN_DIM})),
+      p_action_start(model.add_parameters({ACTION_DIM})),
+      p_abias(model.add_parameters({ACTION_SIZE})),
 
-      p_buffer_guard(model->add_parameters({LSTM_INPUT_DIM})),
-      p_stack_guard(model->add_parameters({LSTM_INPUT_DIM})),
-      p_output_guard(model->add_parameters({LSTM_INPUT_DIM})),
+      p_buffer_guard(model.add_parameters({LSTM_INPUT_DIM})),
+      p_stack_guard(model.add_parameters({LSTM_INPUT_DIM})),
+      p_output_guard(model.add_parameters({LSTM_INPUT_DIM})),
 
-      p_start_of_word(model->add_parameters({LSTM_INPUT_DIM})), //Miguel
-      p_end_of_word(model->add_parameters({LSTM_INPUT_DIM})), //Miguel 
+      p_start_of_word(model.add_parameters({LSTM_INPUT_DIM})), //Miguel
+      p_end_of_word(model.add_parameters({LSTM_INPUT_DIM})), //Miguel 
 
-      char_emb(model->add_lookup_parameters(CHAR_SIZE, {INPUT_DIM})),//Miguel
-
-      p_cW(model->add_parameters({LSTM_INPUT_DIM, LSTM_INPUT_DIM * 2})), //ner.
+      char_emb(model.add_lookup_parameters(CHAR_SIZE, {INPUT_DIM})),//Miguel
 
 //      fw_char_lstm(LAYERS, LSTM_CHAR_OUTPUT_DIM, LSTM_INPUT_DIM, model), //Miguel
 //      bw_char_lstm(LAYERS, LSTM_CHAR_OUTPUT_DIM, LSTM_INPUT_DIM,  model), //Miguel
 
       fw_char_lstm(LAYERS, LSTM_INPUT_DIM, LSTM_CHAR_OUTPUT_DIM/2, model), //Miguel 
-      bw_char_lstm(LAYERS, LSTM_INPUT_DIM, LSTM_CHAR_OUTPUT_DIM/2, model) /*Miguel*/ {
+      bw_char_lstm(LAYERS, LSTM_INPUT_DIM, LSTM_CHAR_OUTPUT_DIM/2, model), /*Miguel*/
+      p_cW(model.add_parameters({LSTM_INPUT_DIM, LSTM_INPUT_DIM * 2})) { //ner. {
     if (USE_POS) {
-      p_p = model->add_lookup_parameters(POS_SIZE, {POS_DIM});
-      p_p2l = model->add_parameters({LSTM_INPUT_DIM, POS_DIM});
+      p_p = model.add_lookup_parameters(POS_SIZE, {POS_DIM});
+      p_p2l = model.add_parameters({LSTM_INPUT_DIM, POS_DIM});
     }
     if (pretrained.size() > 0) {
-      p_t = model->add_lookup_parameters(VOCAB_SIZE, {PRETRAINED_DIM});
+      p_t = model.add_lookup_parameters(VOCAB_SIZE, {PRETRAINED_DIM});
       for (auto it : pretrained)
-        p_t->Initialize(it.first, it.second);
-      p_t2l = model->add_parameters({LSTM_INPUT_DIM, PRETRAINED_DIM});
+        p_t.initialize(it.first, it.second);
+      p_t2l = model.add_parameters({LSTM_INPUT_DIM, PRETRAINED_DIM});
     } else {
       p_t = nullptr;
       p_t2l = nullptr;
@@ -289,15 +288,15 @@ inline unsigned int UTF8Len(unsigned char x) {
 //               sent will have words replaced by appropriate UNK tokens
 // this lets us use pretrained embeddings, when available, for words that were OOV in the
 // parser training data
-vector<unsigned> log_prob_parser(ComputationGraph* hg,
-                     const vector<unsigned>& raw_sent,  // raw sentence
-                     const vector<unsigned>& sent,  // sent with oovs replaced
-                     const vector<unsigned>& sentPos,
-                     const vector<unsigned>& correct_actions,
-                     const vector<string>& setOfActions,
-                     const map<unsigned, std::string>& intToWords,
-                     bool is_evaluation,
-                     double *right) {
+pair<vector<unsigned>, Expression> log_prob_parser(ComputationGraph* hg,
+                                    const vector<unsigned>& raw_sent,  // raw sentence
+                                    const vector<unsigned>& sent,  // sent with oovs replaced
+                                    const vector<unsigned>& sentPos,
+                                    const vector<unsigned>& correct_actions,
+                                    const vector<string>& setOfActions,
+                                    const map<unsigned, std::string>& intToWords,
+                                    bool is_evaluation,
+                                    double *right) {
   //for (unsigned i = 0; i < sent.size(); ++i) cerr << ' ' << intToWords.find(sent[i])->second;
   //cerr << endl;
     vector<unsigned> results;
@@ -335,8 +334,8 @@ vector<unsigned> log_prob_parser(ComputationGraph* hg,
     action_lstm.start_new_sequence();
     // variables in the computation graph representing the parameters
     Expression pbias = parameter(*hg, p_pbias);
-    Expression H = parameter(*hg, p_H);
-    Expression D = parameter(*hg, p_D);
+    // Expression H = parameter(*hg, p_H);
+    // Expression D = parameter(*hg, p_D);
     Expression R = parameter(*hg, p_R);
     Expression cbias = parameter(*hg, p_cbias);
     Expression S = parameter(*hg, p_S);
@@ -350,7 +349,7 @@ vector<unsigned> log_prob_parser(ComputationGraph* hg,
     if (USE_POS)
       p2l = parameter(*hg, p_p2l);
     Expression t2l;
-    if (p_t2l)
+    if (p_t2l.p)
       t2l = parameter(*hg, p_t2l);
     Expression p2a = parameter(*hg, p_p2a);
     Expression abias = parameter(*hg, p_abias);
@@ -497,7 +496,7 @@ vector<unsigned> log_prob_parser(ComputationGraph* hg,
       } else {
         i_i = affine_transform({ib, w2l, w});
       }
-      if (p_t && pretrained.count(raw_sent[i])) {
+      if (p_t.p && pretrained.count(raw_sent[i])) {
         Expression t = const_lookup(*hg, p_t, raw_sent[i]);
         i_i = affine_transform({i_i, t2l, t});
       }
@@ -543,7 +542,7 @@ vector<unsigned> log_prob_parser(ComputationGraph* hg,
 
       // adist = log_softmax(r_t, current_valid_actions)
       Expression adiste = log_softmax(r_t, current_valid_actions);
-      vector<float> adist = as_vector(hg->incremental_forward());
+      vector<float> adist = as_vector(hg->incremental_forward(adiste));
       double best_score = adist[current_valid_actions[0]];
       unsigned best_a = current_valid_actions[0];
       for (unsigned i = 1; i < current_valid_actions.size(); ++i) {
@@ -638,7 +637,7 @@ vector<unsigned> log_prob_parser(ComputationGraph* hg,
     assert(bufferi.size() == 1);
     Expression tot_neglogprob = -sum(log_probs);
     assert(tot_neglogprob.pg != nullptr);
-    return results;
+    return std::make_pair(results, tot_neglogprob);
   }
 
 };
@@ -671,7 +670,7 @@ void output_conll(const vector<unsigned>& sentence, const vector<unsigned>& pos,
                   const map<int,string>& rel_ref,
                   const map<int,string>& rel_hyp) {
   for (unsigned i = 0; i < (sentence.size()); ++i) {
-    auto index = i + 1;
+    // auto index = i + 1;
     assert(i < sentenceUnkStrings.size() && 
            ((sentence[i] == corpus.get_or_add_word(cpyp::Corpus::UNK) &&
              sentenceUnkStrings[i].size() > 0) ||
@@ -722,7 +721,7 @@ void output_conll(const vector<unsigned>& sentence, const vector<unsigned>& pos,
 }
 
 int main(int argc, char** argv) {
-  cnn::Initialize(argc, argv);
+  dynet::initialize(argc, argv);
 
   cerr << "COMMAND:"; 
   for (unsigned i = 0; i < static_cast<unsigned>(argc); ++i) cerr << ' ' << argv[i];
@@ -746,7 +745,7 @@ int main(int argc, char** argv) {
   LSTM_INPUT_DIM = conf["lstm_input_dim"].as<unsigned>();
   POS_DIM = conf["pos_dim"].as<unsigned>();
   REL_DIM = conf["rel_dim"].as<unsigned>();
-  const unsigned beam_size = conf["beam_size"].as<unsigned>();
+  // const unsigned beam_size = conf["beam_size"].as<unsigned>();
   const unsigned unk_strategy = conf["unk_strategy"].as<unsigned>();
   cerr << "Unknown word strategy: ";
   if (unk_strategy == 1) {
@@ -766,7 +765,7 @@ int main(int argc, char** argv) {
      << '_' << POS_DIM
      << '_' << REL_DIM
      << "-pid" << getpid() << ".params";
-  int best_correct_heads = 0;
+  // int best_correct_heads = 0;
   double best_f1_score=-1.0;
   const string fname = os.str();
   cerr << "Writing parameters to file: " << fname << endl;
@@ -828,12 +827,11 @@ int main(int argc, char** argv) {
   for (unsigned i = 0; i < corpus.nactions; ++i)
     possible_actions[i] = i;
 
-  Model model;
-  ParserBuilder parser(&model, pretrained);
+  ParameterCollection model;
+  ParserBuilder parser(model, pretrained);
   if (conf.count("model")) {
-    ifstream in(conf["model"].as<string>().c_str());
-    boost::archive::text_iarchive ia(in);
-    ia >> model;
+    TextFileLoader loader(conf["model"].as<string>());
+    loader.populate(model);
   }
 
   // OOV words will be replaced by UNK tokens
@@ -842,9 +840,9 @@ int main(int argc, char** argv) {
   //TRAINING
   if (conf.count("train")) {
     signal(SIGINT, signal_callback_handler);
-    SimpleSGDTrainer sgd(&model);
+    SimpleSGDTrainer sgd(model);
     //MomentumSGDTrainer sgd(&model);
-    sgd.eta_decay = 0.08;
+    float eta_decay = 0.08;
     //sgd.eta_decay = 0.05;
     cerr << "Training started."<<"\n";
     vector<unsigned> order(corpus.nsentences);
@@ -864,7 +862,7 @@ int main(int argc, char** argv) {
       for (unsigned sii = 0; sii < status_every_i_iterations; ++sii) {
            if (si == corpus.nsentences) {
              si = 0;
-             if (first) { first = false; } else { sgd.update_epoch(); }
+             if (first) { first = false; } else { sgd.learning_rate *= 1 - eta_decay; }
              cerr << "**SHUFFLE\n";
              random_shuffle(order.begin(), order.end());
            }
@@ -873,19 +871,19 @@ int main(int argc, char** argv) {
            vector<unsigned> tsentence=sentence;
            if (unk_strategy == 1) {
              for (auto& w : tsentence)
-               if (singletons.count(w) && cnn::rand01() < unk_prob) w = kUNK;
+               if (singletons.count(w) && dynet::rand01() < unk_prob) w = kUNK;
            }
 	   const vector<unsigned>& sentencePos=corpus.sentencesPos[order[si]]; 
 	   const vector<unsigned>& actions=corpus.correct_act_sent[order[si]];
            ComputationGraph hg;
-           parser.log_prob_parser(&hg,sentence,tsentence,sentencePos,actions,corpus.actions,corpus.intToWords,false,&right);
-           double lp = as_scalar(hg.incremental_forward());
+           auto pred_loss = parser.log_prob_parser(&hg,sentence,tsentence,sentencePos,actions,corpus.actions,corpus.intToWords,false,&right);
+           double lp = as_scalar(hg.incremental_forward(pred_loss.second));
            if (lp < 0) {
              cerr << "Log prob < 0 on sentence " << order[si] << ": lp=" << lp << endl;
              assert(lp >= 0.0);
            }
-           hg.backward();
-           sgd.update(1.0);
+           hg.backward(pred_loss.second);
+           sgd.update();
            llh += lp;
            ++si;
            trs += actions.size();
@@ -923,7 +921,8 @@ int main(int argc, char** argv) {
          }
 
         ComputationGraph hg;
-        vector<unsigned> pred = parser.log_prob_parser(&hg,sentence,tsentence,sentencePos,vector<unsigned>(),corpus.actions,corpus.intToWords,true,&right);
+        auto pred_loss = parser.log_prob_parser(&hg,sentence,tsentence,sentencePos,vector<unsigned>(),corpus.actions,corpus.intToWords,true,&right);
+        vector<unsigned> & pred = pred_loss.first;
         double lp = 0;
         //vector<unsigned> pred = parser.log_prob_parser_beam(&hg,sentence,sentencePos,corpus.actions,beam_size,&lp);
         llh -= lp;
@@ -986,9 +985,8 @@ int main(int argc, char** argv) {
         cerr << "  **dev (iter=" << iter << " epoch=" << (tot_seen / corpus.nsentences) << ")\tllh=" << llh << " ppl: " << exp(llh / trs) << " err: " << (trs - right) / trs << " f1: " << global_f1_score << "\t[" << dev_size << " sents in " << std::chrono::duration<double, std::milli>(t_end-t_start).count() << " ms]" << endl;
         if (global_f1_score > best_f1_score) {
           best_f1_score = global_f1_score;
-          ofstream out(fname);
-          boost::archive::text_oarchive oa(out);
-          oa << model;
+          TextFileSaver saver(fname);
+          saver.save(model);
           // Create a soft link to the most recent model in order to make it
           // easier to refer to it in a shell script.
           if (!softlinkCreated) {
@@ -1010,7 +1008,7 @@ int main(int argc, char** argv) {
     double right = 0;
     double correct_heads = 0;
     double total_heads = 0;
-    double f1score=0.0;
+    // double f1score=0.0;
 
     // TODO fix it to variable length label
     int confusion[4][4]= {{0}};
@@ -1032,9 +1030,10 @@ int main(int argc, char** argv) {
       }
       ComputationGraph cg;
       double lp = 0;
-      vector<unsigned> pred;
-      if (beam_size == 1)
-        pred = parser.log_prob_parser(&cg,sentence,tsentence,sentencePos,vector<unsigned>(),corpus.actions,corpus.intToWords,true,&right);
+      auto pred_loss = parser.log_prob_parser(&cg,sentence,tsentence,sentencePos,vector<unsigned>(),corpus.actions,corpus.intToWords,true,&right);
+      vector<unsigned> & pred = pred_loss.first;
+      // if (beam_size == 1)
+      //   pred = parser.log_prob_parser(&cg,sentence,tsentence,sentencePos,vector<unsigned>(),corpus.actions,corpus.intToWords,true,&right);
       //else
       //  pred = parser.log_prob_parser_beam(&cg,sentence,tsentence,sentencePos,corpus.actions,beam_size,&lp);
       llh -= lp;
